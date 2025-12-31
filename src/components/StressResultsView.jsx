@@ -1,10 +1,17 @@
 import React from 'react';
 import MatrixDisplay from './MatrixDisplay';
+import NavigationButtons from './NavigationButtons';
 import { gradientBg } from '../styles/commonStyles';
 
-const StressResultsView = ({ sigma, setStep }) => (
+const StressResultsView = ({ sigma, onReset, onBackToInput, currentStep }) => (
   <div style={gradientBg}>
     <div style={{ maxWidth: '700px', margin: '0 auto' }}>
+      <NavigationButtons 
+        onReset={onReset} 
+        onBackToInput={onBackToInput}
+        currentStep={currentStep}
+      />
+
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <h1 style={{
           fontSize: '48px',
@@ -29,7 +36,7 @@ const StressResultsView = ({ sigma, setStep }) => (
       </div>
 
       <button
-        onClick={() => setStep('input')}
+        onClick={onReset}
         style={{
           width: '100%',
           background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
