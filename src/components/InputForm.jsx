@@ -15,7 +15,6 @@ const InputForm = ({ inputs, setInputs, onCalculate }) => {
             <div style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               padding: '10px',
-              paddingBottom: '3px',
               borderRadius: '16px',
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
             }}>
