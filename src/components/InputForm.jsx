@@ -19,7 +19,7 @@ const InputForm = ({ inputs, setInputs, onCalculate }) => {
               borderRadius: '16px',
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
             }}>
-              <img src='/logo.png' height='120' width='120' alt='logo' />
+              <img src='/logo.png' height='120' width='110' alt='logo' />
             </div>
           </div>
           <h1 style={{
