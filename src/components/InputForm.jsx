@@ -14,12 +14,12 @@ const InputForm = ({ inputs, setInputs, onCalculate }) => {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <div style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              padding: '5px',
-              paddingBottom: '1px',
+              padding: '10px',
+              paddingBottom: '3px',
               borderRadius: '16px',
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
             }}>
-              <img src='/logo.png' height='125' width='120' alt='logo' />
+              <img src='/logo.png' height='135' width='132' alt='logo' />
             </div>
           </div>
           <h1 style={{
