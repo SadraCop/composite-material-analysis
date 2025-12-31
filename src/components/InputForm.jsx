@@ -1,45 +1,10 @@
 import React from 'react';
-import { Calculator, ArrowRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { gradientBg, whiteCard } from '../styles/commonStyles';
 
 const InputForm = ({ inputs, setInputs, onCalculate }) => {
   const handleInputChange = (field, value) => {
     setInputs(prev => ({ ...prev, [field]: value }));
-  };
-
-  const validateAndCalculate = () => {
-    // Validation
-    const requiredFields = ['E1', 'E2', 'v12', 'G12', 'N', 'theta', 'thickness'];
-    for (const field of requiredFields) {
-      if (!inputs[field] || inputs[field].trim() === '') {
-        alert(`Please fill in ${field}`);
-        return;
-      }
-    }
-
-    // Validate positive numbers
-    const E1 = parseFloat(inputs.E1);
-    const E2 = parseFloat(inputs.E2);
-    const G12 = parseFloat(inputs.G12);
-    
-    if (E1 <= 0 || E2 <= 0 || G12 <= 0) {
-      alert('Material properties must be positive values');
-      return;
-    }
-
-    const v12 = parseFloat(inputs.v12);
-    if (v12 < 0 || v12 >= 1) {
-      alert('Poisson\'s ratio must be between 0 and 1');
-      return;
-    }
-
-    const N = parseInt(inputs.N);
-    if (N <= 0 || N > 100) {
-      alert('Number of layers must be between 1 and 100');
-      return;
-    }
-
-    onCalculate();
   };
 
   return (
@@ -49,12 +14,12 @@ const InputForm = ({ inputs, setInputs, onCalculate }) => {
           <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
             <div style={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              padding: '10px',
-              paddingBottom: '8px',
+              padding: '5px',
+              paddingBottom: '1px',
               borderRadius: '16px',
               boxShadow: '0 8px 20px rgba(0,0,0,0.3)'
             }}>
-              <img style={{ width: '80px', height: '78px' }} src='/logo.png' />
+              <img src='/logo.png' height='120' width='120' alt='logo' />
             </div>
           </div>
           <h1 style={{
@@ -195,7 +160,7 @@ const InputForm = ({ inputs, setInputs, onCalculate }) => {
           </div>
 
           <button
-            onClick={validateAndCalculate}
+            onClick={onCalculate}
             style={{
               width: '100%',
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
