@@ -1,11 +1,18 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import MatrixDisplay from './MatrixDisplay';
+import NavigationButtons from './NavigationButtons';
 import { gradientBg } from '../styles/commonStyles';
 
-const BasicMatricesView = ({ results, onNext }) => (
+const BasicMatricesView = ({ results, onNext, onReset, onBackToInput, currentStep }) => (
   <div style={gradientBg}>
     <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
+      <NavigationButtons 
+        onReset={onReset} 
+        onBackToInput={onBackToInput}
+        currentStep={currentStep}
+      />
+
       <div style={{ textAlign: 'center', marginBottom: '32px' }}>
         <h1 style={{
           fontSize: '48px',
