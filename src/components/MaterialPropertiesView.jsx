@@ -78,7 +78,7 @@ const MaterialPropertiesView = ({
                   matrix={layer.Q}
                   title="Q"
                   color="#3b82f6"
-                  unit="GPa"
+                  unit="MPa"
                   useScientific={true}
                 />
               </div>
@@ -120,10 +120,10 @@ const MaterialPropertiesView = ({
                   Layer {layer.k} (θ = {layer.theta}°)
                 </div>
                 <MatrixDisplay
-                  matrix={layer.Q_prime}
-                  title="Q'"
+                  title="Q̄"
+                  matrix={layer.Qbar}
                   color="#8b5cf6"
-                  unit="GPa"
+                  unit="MPa"
                   useScientific={true}
                 />
               </div>
