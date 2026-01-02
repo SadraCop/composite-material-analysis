@@ -47,16 +47,3 @@ const toSuperscript = (num) => {
     .map((char) => superscripts[char] || char)
     .join("");
 };
-
-export const formatMatrix = (matrix, precision = 4) => {
-  return matrix.map((row) =>
-    row.map((cell) => formatScientific(cell, precision))
-  );
-};
-
-export const formatMatrixScientific = (matrix, precision = 4) => {
-  if (!matrix || !Array.isArray(matrix)) return matrix;
-  return matrix.map((row) =>
-    row.map((cell) => formatScientific(cell, precision))
-  );
-};

@@ -79,9 +79,9 @@ const ForceInputView = ({
             </h2>
             <div style={{ display: "grid", gap: "16px" }}>
               {[
-                { label: "N_x", unit: "kN/mm", index: 0 },
-                { label: "N_y", unit: "kN/mm", index: 1 },
-                { label: "N_xy", unit: "kN/mm", index: 2 },
+                { label: "N_x", unit: "N/mm", index: 0 },
+                { label: "N_y", unit: "N/mm", index: 1 },
+                { label: "N_xy", unit: "N/mm", index: 2 },
               ].map(({ label, unit, index }) => (
                 <div key={label}>
                   <label
@@ -151,9 +151,9 @@ const ForceInputView = ({
             </h2>
             <div style={{ display: "grid", gap: "16px" }}>
               {[
-                { label: "M_x", unit: "kN", index: 0 },
-                { label: "M_y", unit: "kN", index: 1 },
-                { label: "M_xy", unit: "kN", index: 2 },
+                { label: "M_x", unit: "N", index: 0 },
+                { label: "M_y", unit: "N", index: 1 },
+                { label: "M_xy", unit: "N", index: 2 },
               ].map(({ label, unit, index }) => (
                 <div key={label}>
                   <label

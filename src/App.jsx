@@ -1,25 +1,33 @@
 import { useState, useEffect } from "react";
+
+// Views
 import InputForm from "./components/InputForm";
+import MaterialPropertiesView from "./components/MaterialPropertiesView";
 import BasicMatricesView from "./components/BasicMatricesView";
 import AdvancedMatricesView from "./components/AdvancedMatricesView";
 import ForceInputView from "./components/ForceInputView";
 import StrainCurvatureView from "./components/StrainCurvatureView";
 import StressResultsView from "./components/StressResultsView";
-import MaterialPropertiesView from "./components/MaterialPropertiesView";
+
+// Calculations
 import { calculateMaterialProperties } from "./calculations/materialProperties";
 import {
-  calculateLayerW,
   calculateLayerQ,
   calculateABDMatrices,
 } from "./calculations/layerCalculations";
+
 import { calculateDerivedMatrices } from "./calculations/derivedMatrices";
-import { calculateLayerQPrime } from "./calculations/qPrimeCalculations";
+import { calculateLayerQbar } from "./calculations/layerCalculations";
+
+// Utils
 import { multiplyMatrices, addMatrices } from "./utils/matrixOperations";
+import { strainAtZ } from "./utils/strainUtils";
 
 const STORAGE_KEY = "composite_analysis_state";
 
 const CompositeMaterialAnalysis = () => {
   const [step, setStep] = useState("input");
+
   const [inputs, setInputs] = useState({
     E1: "",
     E2: "",
@@ -29,55 +37,59 @@ const CompositeMaterialAnalysis = () => {
     theta: "",
     thickness: "",
   });
+
   const [results, setResults] = useState(null);
+
   const [forces, setForces] = useState({
     N: [0, 0, 0],
     M: [0, 0, 0],
   });
+
   const [strainResults, setStrainResults] = useState(null);
   const [stressResults, setStressResults] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load state from sessionStorage on mount
+  // ─────────────────────────────────────────────
+  // Load / Save session
+  // ─────────────────────────────────────────────
   useEffect(() => {
     try {
-      const savedState = sessionStorage.getItem(STORAGE_KEY);
-      if (savedState) {
-        const parsed = JSON.parse(savedState);
-        if (parsed.step) setStep(parsed.step);
-        if (parsed.inputs) setInputs(parsed.inputs);
-        if (parsed.results) setResults(parsed.results);
-        if (parsed.forces) setForces(parsed.forces);
-        if (parsed.strainResults) setStrainResults(parsed.strainResults);
-        if (parsed.stressResults) setStressResults(parsed.stressResults);
+      const saved = sessionStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        setStep(parsed.step || "input");
+        setInputs(parsed.inputs || inputs);
+        setResults(parsed.results || null);
+        setForces(parsed.forces || forces);
+        setStrainResults(parsed.strainResults || null);
+        setStressResults(parsed.stressResults || null);
       }
-    } catch (error) {
-      console.error("Error loading saved state:", error);
+    } catch (e) {
+      console.error("Error loading state:", e);
     } finally {
       setIsLoading(false);
     }
   }, []);
 
-  // Save state to sessionStorage whenever it changes
   useEffect(() => {
     if (!isLoading) {
-      try {
-        const stateToSave = {
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
           step,
           inputs,
           results,
           forces,
           strainResults,
           stressResults,
-        };
-        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(stateToSave));
-      } catch (error) {
-        console.error("Error saving state:", error);
-      }
+        })
+      );
     }
   }, [step, inputs, results, forces, strainResults, stressResults, isLoading]);
 
-  // Reset everything
+  // ─────────────────────────────────────────────
+  // Reset
+  // ─────────────────────────────────────────────
   const resetAnalysis = () => {
     setStep("input");
     setInputs({
@@ -96,82 +108,44 @@ const CompositeMaterialAnalysis = () => {
     sessionStorage.removeItem(STORAGE_KEY);
   };
 
-  // Go back to last input page
   const goBackToLastInput = () => {
-    if (step === "stress" || step === "strain") {
-      setStep("forces");
-    } else if (
-      step === "forces" ||
-      step === "advanced" ||
-      step === "basic" ||
-      step === "material"
-    ) {
-      setStep("input");
-    }
+    if (step === "stress" || step === "strain") setStep("forces");
+    else setStep("input");
   };
 
+  // ─────────────────────────────────────────────
+  // Main calculation (ABD)
+  // ─────────────────────────────────────────────
   const calculate = () => {
     try {
-      // Validate all inputs
-      if (
-        !inputs.E1 ||
-        !inputs.E2 ||
-        !inputs.v12 ||
-        !inputs.G12 ||
-        !inputs.N ||
-        !inputs.theta ||
-        !inputs.thickness
-      ) {
-        alert("Error: All fields are required. Please fill in all inputs.");
+      // Parse & validate
+      const numLayers = parseInt(inputs.N, 10);
+      if (!Number.isInteger(numLayers) || numLayers <= 0 || numLayers > 100) {
+        alert("Number of layers must be a positive integer (1–100).");
         return;
       }
 
+      const thetaValues = inputs.theta
+        .split(",")
+        .map((v) => parseFloat(v.trim()));
+      const thicknessValues = inputs.thickness
+        .split(",")
+        .map((v) => parseFloat(v.trim()));
+
+      if (
+        thetaValues.length !== numLayers ||
+        thicknessValues.length !== numLayers ||
+        thicknessValues.some((t) => t <= 0)
+      ) {
+        alert("Theta and thickness values must match number of layers.");
+        return;
+      }
+
+      // Material properties (unit conversion!)
       const E1 = parseFloat(inputs.E1);
       const E2 = parseFloat(inputs.E2);
-      const v12 = parseFloat(inputs.v12);
       const G12 = parseFloat(inputs.G12);
-      const N = parseInt(inputs.N);
-
-      if (isNaN(E1) || isNaN(E2) || isNaN(v12) || isNaN(G12) || isNaN(N)) {
-        alert("Error: Please enter valid numbers for all fields.");
-        return;
-      }
-
-      if (E1 <= 0 || E2 <= 0 || G12 <= 0) {
-        alert(
-          "Error: Material properties (E1, E2, G12) must be positive values."
-        );
-        return;
-      }
-
-      if (v12 < 0 || v12 >= 1) {
-        alert("Error: Poisson's ratio must be between 0 and 1.");
-        return;
-      }
-
-      if (N <= 0 || N > 100) {
-        alert("Error: Number of layers must be between 1 and 100.");
-        return;
-      }
-
-      const theta_values = inputs.theta.split(",").map((x) => {
-        const val = parseFloat(x.trim());
-        if (isNaN(val)) throw new Error("Invalid theta value");
-        return val;
-      });
-
-      const thickness_values = inputs.thickness.split(",").map((x) => {
-        const val = parseFloat(x.trim());
-        if (isNaN(val) || val <= 0) throw new Error("Invalid thickness value");
-        return val;
-      });
-
-      if (theta_values.length !== N || thickness_values.length !== N) {
-        alert(
-          `Error: You must enter exactly ${N} values for theta and thickness!`
-        );
-        return;
-      }
+      const v12 = parseFloat(inputs.v12);
 
       const { Q11, Q22, Q12, Q66 } = calculateMaterialProperties(
         E1,
@@ -180,135 +154,167 @@ const CompositeMaterialAnalysis = () => {
         G12
       );
 
-      const layers = theta_values.map((theta, i) => ({
-        k: i + 1,
-        theta: theta,
-        thickness: thickness_values[i],
-        Q: calculateLayerQ(E1, E2, v12, G12),
-        W: calculateLayerW(theta, Q11, Q22, Q12, Q66),
-        Q_prime: calculateLayerQPrime(theta, Q11, Q22, Q12, Q66),
-      }));
+      // z coordinates
+      const totalThickness = thicknessValues.reduce((a, b) => a + b, 0);
+      let zCurrent = totalThickness / 2;
 
-      const { A, B, D } = calculateABDMatrices(layers, thickness_values);
-      const derivedMatrices = calculateDerivedMatrices(A, B, D);
+      const layers = thetaValues.map((theta, i) => {
+        const t = thicknessValues[i];
 
-      setResults({
-        A,
-        B,
-        D,
-        layers,
-        ...derivedMatrices,
+        const zTop = zCurrent;
+        const zBot = zCurrent - t;
+        const zMid = (zTop + zBot) / 2;
+
+        zCurrent = zBot;
+
+        return {
+          k: i + 1,
+          theta,
+          thickness: t,
+          z_top: zTop,
+          z_mid: zMid,
+          z_bot: zBot,
+
+          // Q in material coordinates (local)
+          Q: calculateLayerQ(E1, E2, v12, G12),
+
+          // Q̄ in global coordinates
+          Qbar: calculateLayerQbar(theta, Q11, Q22, Q12, Q66),
+        };
       });
+
+      const { A, B, D } = calculateABDMatrices(layers, thicknessValues);
+      const derived = calculateDerivedMatrices(A, B, D);
+
+      setResults({ A, B, D, layers, ...derived });
       setStep("material");
-    } catch (error) {
-      alert("Error in calculation: " + error.message);
-      console.error(error);
+    } catch (e) {
+      alert("Calculation error: " + e.message);
+      console.error(e);
     }
   };
 
+  if (!forces.N.every(Number.isFinite) || !forces.M.every(Number.isFinite)) {
+    alert("Forces and moments must be valid numbers.");
+    return;
+  }
+
+  // ─────────────────────────────────────────────
+  // Strain & curvature
+  // ─────────────────────────────────────────────
   const calculateStrain = () => {
     try {
-      const N_matrix = forces.N.map((v) => [v]);
-      const M_matrix = forces.M.map((v) => [v]);
+      const Nmat = forces.N.map((v) => [v]);
+      const Mmat = forces.M.map((v) => [v]);
 
-      const eps_part1 = multiplyMatrices(results.A_pr, N_matrix);
-      const eps_part2 = multiplyMatrices(results.B_pr, M_matrix);
-      const eps = addMatrices(eps_part1, eps_part2);
+      const eps = addMatrices(
+        multiplyMatrices(results.A_pr, Nmat),
+        multiplyMatrices(results.B_pr, Mmat)
+      );
 
-      const kap_part1 = multiplyMatrices(results.H_pr, N_matrix);
-      const kap_part2 = multiplyMatrices(results.D_pr, M_matrix);
-      const kap = addMatrices(kap_part1, kap_part2);
+      const kap = addMatrices(
+        multiplyMatrices(results.H_pr, Nmat),
+        multiplyMatrices(results.D_pr, Mmat)
+      );
 
       setStrainResults({ eps, kap });
       setStep("strain");
-    } catch (error) {
-      alert("Error in calculation: " + error.message);
-      console.error(error);
+    } catch (e) {
+      alert("Strain calculation error: " + e.message);
+      console.error(e);
     }
   };
 
+  // ─────────────────────────────────────────────
+  // Stress (full CLT: ε0 + zκ)
+  // ─────────────────────────────────────────────
   const calculateStress = () => {
     try {
-      const W = results.layers[0].W;
-      const sigma = multiplyMatrices(W, strainResults.eps);
+      const stresses = results.layers.map((layer) => ({
+        layer: layer.k,
+        theta: layer.theta,
+        top: multiplyMatrices(
+          layer.Qbar,
+          strainAtZ(strainResults.eps, strainResults.kap, layer.z_top)
+        ),
+        mid: multiplyMatrices(
+          layer.Qbar,
+          strainAtZ(strainResults.eps, strainResults.kap, layer.z_mid)
+        ),
+        bottom: multiplyMatrices(
+          layer.Qbar,
+          strainAtZ(strainResults.eps, strainResults.kap, layer.z_bot)
+        ),
+      }));
 
-      setStressResults({ sigma });
+      setStressResults(stresses);
       setStep("stress");
-    } catch (error) {
-      alert("Error in stress calculation: " + error.message);
-      console.error(error);
+    } catch (e) {
+      alert("Stress calculation error: " + e.message);
+      console.error(e);
     }
   };
 
-  // Show loading or return null while loading
-  if (isLoading) {
-    return null;
-  }
+  if (isLoading) return null;
 
-  // Common props for navigation
-  const navigationProps = {
+  // ─────────────────────────────────────────────
+  // Routing
+  // ─────────────────────────────────────────────
+  const navProps = {
     onReset: resetAnalysis,
     onBackToInput: goBackToLastInput,
     currentStep: step,
   };
 
-  if (step === "stress") {
-    return (
-      <StressResultsView sigma={stressResults.sigma} {...navigationProps} />
-    );
-  }
+  if (step === "stress")
+    return <StressResultsView sigma={stressResults} {...navProps} />;
 
-  if (step === "strain") {
+  if (step === "strain")
     return (
       <StrainCurvatureView
         eps={strainResults.eps}
         kap={strainResults.kap}
         onNext={calculateStress}
-        {...navigationProps}
+        {...navProps}
       />
     );
-  }
 
-  if (step === "forces") {
+  if (step === "forces")
     return (
       <ForceInputView
         forces={forces}
         setForces={setForces}
         onCalculate={calculateStrain}
-        {...navigationProps}
+        {...navProps}
       />
     );
-  }
 
-  if (step === "advanced") {
+  if (step === "advanced")
     return (
       <AdvancedMatricesView
         results={results}
         onNext={() => setStep("forces")}
-        {...navigationProps}
+        {...navProps}
       />
     );
-  }
 
-  if (step === "basic") {
+  if (step === "basic")
     return (
       <BasicMatricesView
         results={results}
         onNext={() => setStep("advanced")}
-        {...navigationProps}
+        {...navProps}
       />
     );
-  }
 
-  if (step === "material") {
+  if (step === "material")
     return (
       <MaterialPropertiesView
         layers={results.layers}
         onNext={() => setStep("basic")}
-        {...navigationProps}
+        {...navProps}
       />
     );
-  }
 
   return (
     <InputForm inputs={inputs} setInputs={setInputs} onCalculate={calculate} />

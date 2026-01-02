@@ -47,17 +47,17 @@ const StrainCurvatureView = ({
       >
         <MatrixDisplay
           matrix={eps}
-          title="ε (Strain)"
+          title="ε₀ (Mid-plane strain)"
+          unit="-"
           color="#10b981"
           labels={["ε_x", "ε_y", "γ_xy"]}
-          unit="mm/mm"
         />
         <MatrixDisplay
           matrix={kap}
           title="κ (Curvature)"
+          unit="1/mm"
           color="#3b82f6"
           labels={["κ_x", "κ_y", "κ_xy"]}
-          unit="1/mm"
         />
       </div>
       <button
